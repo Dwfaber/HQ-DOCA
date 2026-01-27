@@ -3,6 +3,11 @@ import { useLogto, useHandleSignInCallback } from "@logto/react";
 import Sidebar from "./components/Sidebar";
 import HubPage from "./pages/HubPage";
 import PainelPage from "./pages/PainelPage";
+import ClientsPage from "./pages/ClientsPage";
+import UsersPage from "./pages/UsersPage";
+import LLMUsagePage from "./pages/LLMUsagePage";
+import InfraPage from "./pages/InfraPage";
+import FinancePage from "./pages/FinancePage";
 
 export type PageId = "hub" | "painel" | "clients" | "users" | "llm" | "infra" | "finance";
 
@@ -72,18 +77,32 @@ function LoadingScreen() {
 function AuthenticatedApp() {
   const [currentPage, setCurrentPage] = useState<PageId>("hub");
 
+  const renderPage = () => {
+    switch (currentPage) {
+      case "hub":
+        return <HubPage />;
+      case "painel":
+        return <PainelPage />;
+      case "clients":
+        return <ClientsPage />;
+      case "users":
+        return <UsersPage />;
+      case "llm":
+        return <LLMUsagePage />;
+      case "infra":
+        return <InfraPage />;
+      case "finance":
+        return <FinancePage />;
+      default:
+        return <HubPage />;
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-[#fafafa]">
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-      
       <main className="flex-1 ml-20">
-        {currentPage === "hub" && <HubPage />}
-        {currentPage === "painel" && <PainelPage />}
-        {currentPage === "clients" && <PainelPage />}
-        {currentPage === "users" && <PainelPage />}
-        {currentPage === "llm" && <PainelPage />}
-        {currentPage === "infra" && <PainelPage />}
-        {currentPage === "finance" && <PainelPage />}
+        {renderPage()}
       </main>
     </div>
   );
