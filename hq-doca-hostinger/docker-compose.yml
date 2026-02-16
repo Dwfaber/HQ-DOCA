@@ -1,0 +1,130 @@
+# HQ-DOCA Docker Compose - Com integração Hostinger MCP
+# Deploy: docker-compose up -d
+
+services:
+  # ==================== HQ-DOCA Frontend ====================
+  hq-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hq-doca-frontend
+    restart: unless-stopped
+    ports:
+      - "3100:80"
+    environment:
+      - VITE_API_URL=https://api.docaperformance.com.br
+      - VITE_LOGTO_ENDPOINT=https://auth.docaperformance.com.br
+      - VITE_LOGTO_APP_ID=${LOGTO_APP_ID}
+    networks:
+      - hq-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hq-frontend.rule=Host(`hq.docaperformance.com.br`)"
+      - "traefik.http.routers.hq-frontend.entrypoints=websecure"
+      - "traefik.http.routers.hq-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.hq-frontend.loadbalancer.server.port=80"
+
+  # ==================== HQ-DOCA Backend API ====================
+  hq-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: hq-doca-api
+    restart: unless-stopped
+    ports:
+      - "3101:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - LOGTO_ENDPOINT=${LOGTO_ENDPOINT}
+      - LOGTO_APP_ID=${LOGTO_APP_ID}
+      - LOGTO_APP_SECRET=${LOGTO_APP_SECRET}
+      # Hostinger Integration
+      - HOSTINGER_API_TOKEN=${HOSTINGER_API_TOKEN}
+      - HOSTINGER_MCP_URL=http://hostinger-mcp:8100
+    depends_on:
+      - hostinger-mcp
+    networks:
+      - hq-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hq-api.rule=Host(`api.docaperformance.com.br`) && PathPrefix(`/api/hq`)"
+      - "traefik.http.routers.hq-api.entrypoints=websecure"
+      - "traefik.http.routers.hq-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.hq-api.loadbalancer.server.port=3000"
+
+  # ==================== Hostinger MCP Server ====================
+  hostinger-mcp:
+    image: node:24-alpine
+    container_name: hostinger-mcp-server
+    restart: unless-stopped
+    working_dir: /app
+    command: >
+      sh -c "npm install -g hostinger-api-mcp@latest && 
+             hostinger-api-mcp --http --host 0.0.0.0 --port 8100"
+    environment:
+      - API_TOKEN=${HOSTINGER_API_TOKEN}
+      - DEBUG=false
+    ports:
+      - "8100:8100"
+    networks:
+      - hq-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ==================== Supabase (Self-hosted) ====================
+  supabase-db:
+    image: supabase/postgres:15.1.1.61
+    container_name: hq-supabase-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=hq_doca
+    volumes:
+      - ./supabase/volumes/db/data:/var/lib/postgresql/data
+      - ./supabase/volumes/db/init:/docker-entrypoint-initdb.d
+    networks:
+      - hq-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  supabase-kong:
+    image: kong:2.8.1
+    container_name: hq-supabase-kong
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/var/lib/kong/kong.yml
+      - KONG_DNS_ORDER=LAST,A,CNAME
+      - KONG_PLUGINS=request-transformer,cors,key-auth,acl
+    volumes:
+      - ./supabase/volumes/kong/kong.yml:/var/lib/kong/kong.yml
+    networks:
+      - hq-network
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+networks:
+  hq-network:
+    driver: bridge
+    name: hq-doca-network
+
+volumes:
+  supabase-db-data:

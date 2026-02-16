@@ -13,7 +13,7 @@ import {
   Settings,
   Shield,
   Activity,
-  Zap,
+
   Database,
   Copy,
   Check,
@@ -259,7 +259,7 @@ function ClientDetailCard({
   client,
   expanded,
   onToggle,
-  onRefresh
+  onRefresh: _onRefresh
 }: {
   client: Client;
   expanded: boolean;

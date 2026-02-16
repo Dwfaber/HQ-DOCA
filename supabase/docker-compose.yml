@@ -44,6 +44,7 @@ services:
     networks:
       - supabase_internal
       - traefik_proxy
+      - doca-cloud
     depends_on:
       db:
         condition: service_healthy
@@ -92,6 +93,8 @@ services:
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${JWT_SECRET}
       PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_DB_POOL: "50"
+      PGRST_DB_POOL_ACQUISITION_TIMEOUT: "20"
     networks:
       - supabase_internal
     depends_on:
@@ -201,6 +204,7 @@ services:
     networks:
       - supabase_internal
       - traefik_proxy
+      - doca-cloud
     depends_on:
       meta:
         condition: service_started
@@ -216,4 +220,6 @@ networks:
   supabase_internal:
     driver: bridge
   traefik_proxy:
+    external: true
+  doca-cloud:
     external: true

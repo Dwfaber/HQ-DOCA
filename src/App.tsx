@@ -15,7 +15,6 @@ function CallbackHandler() {
   const { isLoading } = useHandleSignInCallback(() => {
     window.location.href = '/';
   });
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
@@ -28,17 +27,14 @@ function CallbackHandler() {
       </div>
     );
   }
-
   return null;
 }
 
 function LoginScreen() {
-  const { signIn, isLoading } = useLogto();
-
+  const { signIn } = useLogto();
   const handleSignIn = () => {
     signIn('https://hq.docaperformance.com.br/callback');
   };
-
   return (
     <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
       <div className="text-center">
@@ -46,62 +42,42 @@ function LoginScreen() {
           <span className="text-4xl">🐙</span>
         </div>
         <h1 className="text-4xl font-bold text-slate-900 mb-2">
-          DOC<span className="gradient-text">A</span> HQ
+          DOC<span className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">A</span> HQ
         </h1>
-        <p className="text-slate-400 mb-8">Command Center</p>
+        <p className="text-slate-500 mb-8">Central de Comando</p>
         <button
           onClick={handleSignIn}
-          disabled={isLoading}
-          className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#ff6b2c] to-[#ff8f5a] text-white font-semibold shadow-lg shadow-orange-500/30 hover:shadow-xl hover:scale-105 transition-all disabled:opacity-50"
+          className="px-8 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-orange-500/30 transition-all"
         >
-          {isLoading ? "Carregando..." : "Entrar"}
+          Entrar com Auth Center
         </button>
       </div>
     </div>
   );
 }
 
-function LoadingScreen() {
-  return (
-    <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#ff6b2c] to-[#ff8f5a] flex items-center justify-center animate-pulse">
-          <span className="text-2xl">🐙</span>
-        </div>
-        <p className="text-slate-500">Carregando DOCA HQ...</p>
-      </div>
-    </div>
-  );
-}
+function MainApp() {
+  const [currentPage, setCurrentPage] = useState<PageId>("painel");
+  // const { signOut } = useLogto();
 
-function AuthenticatedApp() {
-  const [currentPage, setCurrentPage] = useState<PageId>("hub");
 
   const renderPage = () => {
     switch (currentPage) {
-      case "hub":
-        return <HubPage />;
-      case "painel":
-        return <PainelPage />;
-      case "clients":
-        return <ClientsPage />;
-      case "users":
-        return <UsersPage />;
-      case "llm":
-        return <LLMUsagePage />;
-      case "infra":
-        return <InfraPage />;
-      case "finance":
-        return <FinancePage />;
-      default:
-        return <HubPage />;
+      case "hub": return <HubPage />;
+      case "painel": return <PainelPage />;
+      case "clients": return <ClientsPage />;
+      case "users": return <UsersPage />;
+      case "llm": return <LLMUsagePage />;
+      case "infra": return <InfraPage />;
+      case "finance": return <FinancePage />;
+      default: return <PainelPage />;
     }
   };
 
   return (
     <div className="flex min-h-screen bg-[#fafafa]">
-      <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-      <main className="flex-1 ml-20">
+      <Sidebar currentPage={currentPage} onNavigate={setCurrentPage}  />
+      <main className="flex-1 ml-16">
         {renderPage()}
       </main>
     </div>
@@ -111,18 +87,27 @@ function AuthenticatedApp() {
 export default function App() {
   const { isAuthenticated, isLoading } = useLogto();
 
-  // Check if we're on the callback route
+  // Handle callback
   if (window.location.pathname === '/callback') {
     return <CallbackHandler />;
   }
 
+  // Loading state
   if (isLoading) {
-    return <LoadingScreen />;
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff6b2c] to-[#ff8f5a] flex items-center justify-center animate-pulse">
+          <span className="text-2xl">🐙</span>
+        </div>
+      </div>
+    );
   }
 
+  // Not authenticated
   if (!isAuthenticated) {
     return <LoginScreen />;
   }
 
-  return <AuthenticatedApp />;
+  // Main app
+  return <MainApp />;
 }
